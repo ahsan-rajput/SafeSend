@@ -1,0 +1,32 @@
+@{ ViewData["Title"] = "Share privately"; }
+<section class="hero-section">
+    <div class="hero-grid">
+        <div class="hero-copy">
+            <div class="eyebrow"><span class="status-dot"></span> A SAFER WAY TO SHARE SENSITIVE INFORMATION</div>
+            <h1>Share<br />privately.<br /><span>leave no trace.</span></h1>
+            <p class="hero-lead">Send sensitive text and files through a link designed to disappear. Simple for you, safer for everyone.</p>
+            <div class="hero-actions">
+                <a class="button button-primary" asp-controller="Share" asp-action="Create">Create a secure link ↗</a>
+                <a class="text-link" asp-controller="Account" asp-action="Login">See how it works ↗</a>
+            </div>
+            <div class="hero-note"><span class="mini-shield">✳</span><span>No account required to create a link</span></div>
+        </div>
+        <div class="hero-visual" aria-label="Abstract soft green illustration representing private sharing">
+            <div class="visual-glow"></div>
+            <div class="hero-orb"><span class="orb-mark">Ⅱ</span></div>
+            <div class="floating-chip chip-top"><span class="chip-icon">✓</span><span><b>One-time access</b><small>View once, then gone</small></span></div>
+            <div class="floating-chip chip-bottom"><span class="chip-icon chip-clock">◷</span><span><b>Link protected</b><small>Choose when it expires</small></span></div>
+            <div class="visual-caption">YOUR DATA. YOUR RULES.</div>
+        </div>
+    </div>
+    <div class="hero-bottomline"><span>PRIVATE BY DESIGN</span><span>SHARE ONLY WHAT MATTERS</span></div>
+</section>
+<section class="how-section">
+    <div class="section-heading"><div class="eyebrow">A SIMPLE WAY TO SHARE</div><h2>Privacy shouldn't<br />be complicated.</h2><p>Everything you need to share something sensitive, without the extra steps.</p></div>
+    <div class="steps-grid">
+        <article class="step-card"><span class="step-number">01</span><div class="step-icon">↗</div><h3>Create</h3><p>Prepare the information you want to send, whether text or a small file.</p></article>
+        <article class="step-card"><span class="step-number">02</span><div class="step-icon">⌁</div><h3>Share</h3><p>Send a private link directly to the person who needs it.</p></article>
+        <article class="step-card"><span class="step-number">03</span><div class="step-icon">×</div><h3>Disappear</h3><p>Your link is designed to become unavailable after its allowed access or expiry.</p></article>
+    </div>
+</section>
+<section class="bottom-cta"><div><div class="eyebrow eyebrow-light">READY WHEN YOU ARE</div><h2>Make your next share<br />a little more secure.</h2></div><a class="button button-white" asp-controller="Share" asp-action="Create">Create your link ↗</a></section>

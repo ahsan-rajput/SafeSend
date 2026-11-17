@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+safesend.db
+safesend.db-shm
+safesend.db-wal
