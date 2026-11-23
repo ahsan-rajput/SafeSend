@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SafeSend.Models;
+using SafeSend.Repositories;
 
 namespace SafeSend.Controllers;
 
 public class AccountController(
     UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager) : Controller
+    SignInManager<ApplicationUser> signInManager,
+    IUserRepository userRepository) : Controller
 {
     [HttpGet]
     public IActionResult Register() => User.Identity?.IsAuthenticated == true ? RedirectToAction("Index", "Dashboard") : View();
@@ -17,9 +19,9 @@ public class AccountController(
         if (!ModelState.IsValid) return View(model);
         var user = new ApplicationUser
         {
-            UserName = model.Email,
-            Email = model.Email,
-            DisplayName = model.DisplayName
+            UserName = model.Email.Trim(),
+            Email = model.Email.Trim(),
+            DisplayName = model.DisplayName.Trim()
         };
         var result = await userManager.CreateAsync(user, model.Password);
         if (result.Succeeded)
@@ -61,8 +63,13 @@ public class AccountController(
     [HttpGet]
     public async Task<IActionResult> EmailAvailable(string email)
     {
-        if (string.IsNullOrWhiteSpace(email)) return Json(new { available = false, message = "Enter an email address." });
-        var existing = await userManager.FindByEmailAsync(email.Trim());
-        return Json(new { available = existing is null, message = existing is null ? "Email is available." : "An account with this email already exists." });
+        if (string.IsNullOrWhiteSpace(email))
+            return Json(new { available = false, message = "Enter an email address." });
+        var available = await userRepository.IsEmailAvailableAsync(email);
+        return Json(new
+        {
+            available,
+            message = available ? "Email is available." : "An account with this email already exists."
+        });
     }
 }

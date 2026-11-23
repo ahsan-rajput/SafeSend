@@ -1,3 +1,130 @@
 @model IReadOnlyList<ShareLink>
-@{ ViewData["Title"] = "My links"; }
-<section class="dashboard-section"><div class="dashboard-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>My links<span class="heading-period">.</span></h1><p>Keep track of the links associated with your account.</p></div><a class="button button-primary" asp-controller="Share" asp-action="Create">Create new link <span>↗</span></a></div><div class="dashboard-stats"><div class="stat-card"><span class="stat-label">TOTAL LINKS</span><strong>@Model.Count</strong><small>Created with your account</small></div><div class="stat-card"><span class="stat-label">ACTIVE LINKS</span><strong>@Model.Count(x => !x.IsRevoked && x.ExpiresAtUtc > DateTime.UtcNow)</strong><small>Not revoked or expired</small></div><div class="stat-card"><span class="stat-label">EXPIRED / REVOKED</span><strong>@Model.Count(x => x.IsRevoked || x.ExpiresAtUtc <= DateTime.UtcNow)</strong><small>No longer available</small></div></div><div class="table-card"><div class="table-heading"><div><h2>Recent links</h2><p>Your latest sharing activity</p></div><span class="table-count">@Model.Count records</span></div>@if (Model.Count == 0) { <div class="empty-state"><div class="empty-icon">↗</div><h3>Your links will appear here</h3><p>You haven't created any account-associated links yet.</p><a class="text-link" asp-controller="Share" asp-action="Create">Explore the create-link page →</a></div> } else { <div class="table-scroll"><table><thead><tr><th>LABEL</th><th>CREATED</th><th>EXPIRES</th><th>STATUS</th></tr></thead><tbody>@foreach (var link in Model) { var expired = link.ExpiresAtUtc <= DateTime.UtcNow; <tr><td class="table-primary-text">@link.Label</td><td>@link.CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy")</td><td>@link.ExpiresAtUtc.ToLocalTime().ToString("dd MMM yyyy")</td><td><span class="status-badge @(link.IsRevoked || expired ? "status-muted" : "status-active")">@(link.IsRevoked ? "Revoked" : expired ? "Expired" : "Active")</span></td></tr> }</tbody></table></div> }</div><p class="dashboard-disclaimer">This dashboard currently displays link metadata only. Link creation, encryption and revocation are outside this delivery.</p></section>
+@{
+    ViewData["Title"] = "My links";
+    var total = Model.Count;
+    var active = Model.Count(x => !x.IsRevoked && x.ExpiresAtUtc > DateTime.UtcNow);
+    var inactive = total - active;
+}
+<section class="dashboard-section">
+    <div class="dashboard-heading">
+        <div><div class="eyebrow">YOUR SPACE</div><h1>My links<span class="heading-period">.</span></h1><p>Keep track of the links associated with your account.</p></div>
+        <a class="button button-primary" asp-controller="Share" asp-action="Create">Create new link <span>↗</span></a>
+    </div>
+    <div class="dashboard-stats">
+        <div class="stat-card"><span class="stat-label">TOTAL LINKS</span><strong id="totalLinks">@total</strong><small>Created with your account</small></div>
+        <div class="stat-card"><span class="stat-label">ACTIVE LINKS</span><strong id="activeLinks">@active</strong><small>Not revoked or expired</small></div>
+        <div class="stat-card"><span class="stat-label">EXPIRED / REVOKED</span><strong id="inactiveLinks">@inactive</strong><small>No longer available</small></div>
+    </div>
+    <div class="table-card">
+        <div class="table-heading">
+            <div><h2>Recent links</h2><p>Your latest sharing activity</p></div>
+            <span class="table-count" id="tableCount">@total records</span>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>LABEL</th><th>CREATED</th><th>EXPIRES</th><th>STATUS</th><th>ACTION</th></tr></thead>
+                <tbody id="linksTableBody">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="5">No links created with your account yet.</td></tr>
+                }
+                else
+                {
+                    @foreach (var link in Model)
+                    {
+                        var expired = link.ExpiresAtUtc <= DateTime.UtcNow;
+                        <tr>
+                            <td class="table-primary-text">@link.Label</td>
+                            <td>@link.CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td>@link.ExpiresAtUtc.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td><span class="status-badge @(link.IsRevoked || expired ? "status-muted" : "status-active")">@(link.IsRevoked ? "Revoked" : expired ? "Expired" : "Active")</span></td>
+                            <td>@if (!link.IsRevoked && !expired) { <button type="button" class="text-link revoke-link" data-id="@link.Id">Revoke</button> }</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+        <p class="preview-message" id="dashboardMessage" role="status"></p>
+        <div style="padding:18px 24px"><button type="button" class="button button-quiet button-small" id="refreshLinks">Refresh links</button></div>
+    </div>
+    <p class="dashboard-disclaimer">This dashboard displays link metadata only. Browser encryption and real one-time access are outside this delivery.</p>
+    @Html.AntiForgeryToken()
+</section>
+@section Scripts {
+<script>
+(() => {
+    const body = document.getElementById('linksTableBody');
+    const message = document.getElementById('dashboardMessage');
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    async function refresh() {
+        try {
+            const data = await $.get('/Dashboard/Refresh', { ajax: true });
+            document.getElementById('totalLinks').textContent = data.summary.total;
+            document.getElementById('activeLinks').textContent = data.summary.active;
+            document.getElementById('inactiveLinks').textContent = data.summary.expiredOrRevoked;
+            document.getElementById('tableCount').textContent = `${data.summary.total} records`;
+            body.replaceChildren();
+            if (!data.links.length) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 5;
+                cell.textContent = 'No links created with your account yet.';
+                row.appendChild(cell);
+                body.appendChild(row);
+                return;
+            }
+            data.links.forEach(link => {
+                const row = document.createElement('tr');
+                [link.label, link.created, link.expires].forEach((value, index) => {
+                    const cell = document.createElement('td');
+                    cell.textContent = value;
+                    if (index === 0) cell.className = 'table-primary-text';
+                    row.appendChild(cell);
+                });
+                const statusCell = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `status-badge ${link.status === 'Active' ? 'status-active' : 'status-muted'}`;
+                badge.textContent = link.status;
+                statusCell.appendChild(badge);
+                row.appendChild(statusCell);
+                const actionCell = document.createElement('td');
+                if (link.status === 'Active') {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'text-link revoke-link';
+                    button.dataset.id = link.id;
+                    button.textContent = 'Revoke';
+                    actionCell.appendChild(button);
+                }
+                row.appendChild(actionCell);
+                body.appendChild(row);
+            });
+        } catch (error) {
+            message.textContent = error.responseJSON?.message || 'Could not refresh links.';
+            message.className = 'preview-message is-warning';
+        }
+    }
+
+    document.getElementById('refreshLinks').addEventListener('click', refresh);
+    body.addEventListener('click', async event => {
+        const button = event.target.closest('.revoke-link');
+        if (!button) return;
+        if (!confirm('Revoke this link?')) return;
+        try {
+            const data = await $.post('/Dashboard/Revoke', {
+                id: button.dataset.id,
+                __RequestVerificationToken: token
+            });
+            message.textContent = data.message;
+            message.className = 'preview-message is-success';
+            await refresh();
+        } catch (error) {
+            message.textContent = error.responseJSON?.message || 'Unable to complete the request.';
+            message.className = 'preview-message is-warning';
+        }
+    });
+})();
+</script>
+}

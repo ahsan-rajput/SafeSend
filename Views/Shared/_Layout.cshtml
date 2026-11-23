@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#f8f8f6" />
     <title>@ViewData["Title"] - SafeSend</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
 <header class="site-header">
@@ -31,6 +32,7 @@
 </header>
 <main>@RenderBody()</main>
 <footer class="site-footer"><div class="footer-inner"><a class="footer-brand" asp-controller="Home" asp-action="Index">◈ SafeSend.</a><span>Private sharing, made simple.</span><span>© @DateTime.UtcNow.Year SafeSend</span></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

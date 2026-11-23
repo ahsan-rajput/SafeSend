@@ -125,3 +125,48 @@ The database is initialized when the application starts for the first time. ASP.
 **Current Stage:** Deliverable 2 – ASP.NET Core MVC and Identity implementation.
 
 SafeSend is under active development, with additional security and sharing capabilities planned for future stages.
+
+## Deliverable 3 – Additional Requirements
+
+This update adds the following implementation items while retaining the existing Razor layout, CSS theme, illustrations and page structure:
+
+- **AJAX:** jQuery `$.ajax` submits create-link metadata, `$.get` refreshes dashboard data, and `$.post` revokes a link; email availability remains AJAX-based.
+- **Dropdown:** the create-link form includes expiry presets (1 hour, 6 hours, 24 hours and 7 days), which populate the existing expiry date/time field.
+- **Repository pattern:** `IShareLinkRepository`, `IUserRepository` and `IShareLinkSummaryRepository` separate database/user lookup work from controllers.
+- **Interfaces and Dependency Injection:** all three repositories are registered in `Program.cs` and injected through their interfaces.
+- **HTTP methods:** GET endpoints load pages and dashboard data; POST endpoints create metadata and revoke a link; AJAX uses both.
+- **Identity customization:** the custom `ApplicationUser` continues to store `DisplayName`; Identity has unique-email, password, lockout and application-cookie settings.
+- **Layout sections:** the shared Razor layout supports optional `Styles` and `Scripts` sections.
+- **IIS deployment:** a folder publish profile and ASP.NET Core IIS `web.config` are included.
+
+### Important scope note
+
+The create-link POST currently stores **metadata only** (label, owner and expiry). It does not upload the message/file, perform browser encryption, or generate a real recipient URL. Those remain future SafeSend features as described in the project specification.
+
+### Local IIS deployment
+
+1. Install the .NET 9 Hosting Bundle on the Windows machine that will host the app.
+2. Enable **Internet Information Services (IIS)** and the **ASP.NET Core Module**.
+3. Publish the project in Release mode:
+
+   ```powershell
+   dotnet publish -c Release -o .\publish
+   ```
+
+4. In IIS Manager, create a website whose physical path is the `publish` folder and assign an available port.
+5. Give the IIS Application Pool identity write permission to the folder containing `safesend.db` (the app's data folder).
+6. Browse to the configured local site address.
+
+For a first local test, run `dotnet run` and use the localhost URL printed by ASP.NET Core. IIS hosting should be tested separately after publishing.
+
+### Deliverable 3 verification checklist
+
+- [ ] Register a new account and verify the custom display name is accepted.
+- [ ] Confirm duplicate email feedback appears through AJAX.
+- [ ] Log in and verify authenticated dashboard access.
+- [ ] Create link metadata using each expiry dropdown preset.
+- [ ] Refresh dashboard data using the AJAX refresh button.
+- [ ] Revoke a link and confirm its status changes.
+- [ ] Confirm a user cannot revoke another user's link.
+- [ ] Run `dotnet build` and `dotnet publish -c Release`.
+- [ ] Test the published folder through local IIS.

@@ -7,6 +7,8 @@
     </div>
     <div class="create-layout">
         <div class="create-card">
+            <form id="createLinkForm">
+                @Html.AntiForgeryToken()
             <div class="card-topline"><span class="step-pill">NEW LINK</span><span class="private-note">↗ PRIVATE WORKSPACE</span></div>
             <h2>Link settings</h2>
             <div class="field">
@@ -28,9 +30,19 @@
                 <span class="field-hint" id="fileName">Small files only. File sharing will be connected in a later delivery.</span>
             </div>
             <div class="field">
-                <label for="expiry">Expiry date and time</label>
-                <input id="expiry" class="form-control" type="datetime-local" />
+                <label for="expiryPreset">Expiry preset</label>
+                <select id="expiryPreset" class="form-control">
+                    <option value="1">1 hour</option>
+                    <option value="6">6 hours</option>
+                    <option value="24" selected>24 hours</option>
+                    <option value="168">7 days</option>
+                </select>
             </div>
+            <div class="field">
+                <label for="expiry">Expiry date and time</label>
+                <input id="expiry" name="ExpiresAtLocal" class="form-control" type="datetime-local" required />
+            </div>
+            <input type="hidden" id="linkTitleValue" name="Label" />
             <label class="toggle-card">
                 <span><b>One-time access</b><small>Mark this link as intended for a single view.</small></span>
                 <input type="checkbox" id="oneTime" checked />
@@ -39,6 +51,7 @@
             <button type="button" class="button button-primary button-wide" id="previewButton">Create link record ↗</button>
             <p class="preview-message" id="previewMessage" role="status"></p>
             <p class="scope-note">This delivery stores link settings only. Browser encryption and real one-time access will be connected in a later stage.</p>
+            </form>
         </div>
         <aside class="create-aside">
             <div class="eyebrow">A SMALL REMINDER</div>
@@ -68,17 +81,24 @@
             fileInput.dispatchEvent(new Event('change'));
         }
     });
+
     const expiry = document.getElementById('expiry');
-    if (expiry) {
-        const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const preset = document.getElementById('expiryPreset');
+    const setExpiry = () => {
+        const date = new Date(Date.now() + Number(preset.value) * 60 * 60 * 1000);
         date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-        expiry.value = date.toISOString().slice(0,16);
-    }
-    document.getElementById('previewButton')?.addEventListener('click', () => {
+        expiry.value = date.toISOString().slice(0, 16);
+    };
+    setExpiry();
+    preset.addEventListener('change', setExpiry);
+
+    document.getElementById('previewButton')?.addEventListener('click', async () => {
         const title = document.getElementById('linkTitle').value.trim();
         const message = document.getElementById('message').value.trim();
         const hasFile = fileInput.files.length > 0;
         const result = document.getElementById('previewMessage');
+        const expiryValue = expiry.value;
+
         if (!title) {
             result.textContent = 'Please add a title for your link.';
             result.className = 'preview-message is-warning';
@@ -90,8 +110,35 @@
             result.className = 'preview-message is-warning';
             return;
         }
-        result.textContent = `Settings ready · ${hasFile ? 'File attached' : 'Text message'} · ${document.getElementById('oneTime').checked ? 'One-time access' : 'Multiple views'}. No shareable link is generated in this delivery.`;
-        result.className = 'preview-message is-success';
+        if (!expiryValue || new Date(expiryValue) <= new Date()) {
+            result.textContent = 'Choose an expiry time in the future.';
+            result.className = 'preview-message is-warning';
+            return;
+        }
+
+        // The current delivery persists link metadata only. Message/file contents are not uploaded.
+        document.getElementById('linkTitleValue').value = title;
+        const form = document.getElementById('createLinkForm');
+        const payload = new FormData(form);
+        payload.set('ExpiresAtLocal', expiryValue);
+        payload.set('OneTimeAccess', document.getElementById('oneTime').checked);
+
+        try {
+            const data = await $.ajax({
+                url: '/Share/CreateAjax',
+                method: 'POST',
+                data: payload,
+                processData: false,
+                contentType: false,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            result.textContent = `${data.message} Record #${data.id}.`;
+            result.className = 'preview-message is-success';
+        } catch (error) {
+            const messageText = error.responseJSON?.message || 'Something went wrong. Please try again.';
+            result.textContent = messageText;
+            result.className = 'preview-message is-warning';
+        }
     });
 })();
 </script>
